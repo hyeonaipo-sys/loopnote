@@ -754,29 +754,41 @@
 
   async function loadProfile() {
     try {
-      const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-      if (error) { showToast('불러오기 실패: ' + error.message, true); return; }
-      if (data) {
-        const nickname = data.nickname || currentUser.user_metadata?.full_name?.split(' ')[0] || '사용자';
-        const bio = data.bio || '';
-        lfmUser = data.lfm_username || '';
-
-        document.getElementById('myNameDisplay').textContent = nickname;
-        document.getElementById('myBioDisplay').textContent = bio || '한줄 소개를 추가해보세요';
-        document.getElementById('myBioDisplay').style.color = bio ? 'var(--text)' : 'var(--muted)';
-        document.getElementById('myAvatarDisplay').textContent = nickname[0]?.toUpperCase() || '?';
-        document.getElementById('userName').textContent = nickname;
-        document.getElementById('userInitial').textContent = nickname[0]?.toUpperCase() || '?';
-
-        if (lfmUser) {
-          document.getElementById('ytmusic-status').textContent = `@${lfmUser} 연결됨`;
-          document.getElementById('ytmusic-status').className = 'my-connect-status connected';
-          document.getElementById('ytmusic-btn').textContent = '연결됨';
-          document.getElementById('ytmusic-btn').className = 'my-connect-btn connected';
-        }
-        updateTrackingBanner();
+      // 먼저 localStorage에서 불러오기 (빠름)
+      const key = 'loopnote_profile_' + currentUser.id;
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const p = JSON.parse(cached);
+        applyProfile(p);
       }
-    } catch(e) { console.error('loadProfile catch:', e); }
+      // Supabase에서도 불러오기 (최신 데이터)
+      const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single().catch(() => ({ data: null }));
+      if (data) {
+        const p = { nickname: data.nickname, bio: data.bio, lfm_username: data.lfm_username };
+        localStorage.setItem(key, JSON.stringify(p));
+        applyProfile(p);
+      }
+    } catch(e) { console.error('loadProfile error:', e); }
+  }
+
+  function applyProfile(p) {
+    const nickname = p.nickname || currentUser.user_metadata?.full_name?.split(' ')[0] || '사용자';
+    const bio = p.bio || '';
+    lfmUser = p.lfm_username || '';
+
+    document.getElementById('myNameDisplay').textContent = nickname;
+    document.getElementById('myBioDisplay').textContent = bio || '한줄 소개를 추가해보세요';
+    document.getElementById('myBioDisplay').style.color = bio ? 'var(--text)' : 'var(--muted)';
+    document.getElementById('myAvatarDisplay').textContent = nickname[0]?.toUpperCase() || '?';
+    document.getElementById('userName').textContent = nickname;
+    document.getElementById('userInitial').textContent = nickname[0]?.toUpperCase() || '?';
+
+    if (lfmUser) {
+      document.getElementById('ytmusic-status').textContent = `@${lfmUser} 연결됨`;
+      document.getElementById('ytmusic-status').className = 'my-connect-status connected';
+      document.getElementById('ytmusic-btn').textContent = '연결됨';
+      document.getElementById('ytmusic-btn').className = 'my-connect-btn connected';
+    }
   }
 
   async function saveProfile() {
@@ -803,6 +815,9 @@
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       if (error) { showToast('❌ ' + error.message, true); return; }
+      // localStorage에도 저장
+      const key = 'loopnote_profile_' + currentUser.id;
+      localStorage.setItem(key, JSON.stringify({ nickname: name, bio: bio, lfm_username: lfmUser || null }));
       showToast('✅ 저장됐어요!');
     } catch(e) {
       showToast('❌ ' + e.message, true);
@@ -814,15 +829,20 @@
     if (!username) { showToast('유저네임을 입력해주세요'); return; }
     lfmUser = username;
 
-    // 기존 데이터 먼저 가져와서 병합
-    const { data: existing } = await sb.from('profiles').select('*').eq('id', currentUser.id).single().catch(() => ({ data: null }));
+    // localStorage에 저장
+    const key = 'loopnote_profile_' + currentUser.id;
+    const cached = JSON.parse(localStorage.getItem(key) || '{}');
+    cached.lfm_username = username;
+    localStorage.setItem(key, JSON.stringify(cached));
+
+    // Supabase에도 저장
     await sb.from('profiles').upsert({
       id: currentUser.id,
-      nickname: existing?.nickname || null,
-      bio: existing?.bio || null,
+      nickname: cached.nickname || null,
+      bio: cached.bio || null,
       lfm_username: username,
       updated_at: new Date().toISOString()
-    });
+    }).catch(e => console.error(e));
 
     closeYTModal();
     document.getElementById('ytmusic-status').textContent = `@${username} 연결됨`;
