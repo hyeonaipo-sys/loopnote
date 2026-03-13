@@ -747,8 +747,8 @@
     document.getElementById('userName').textContent = short;
     document.getElementById('userInitial').textContent = short[0]?.toUpperCase() || '?';
     lfmUser = '';
-    buildMonthSlider();
-    buildMonthSelect();
+    try { buildMonthSlider(); } catch(e) { showToast('slider에러:'+e.message,true); }
+    try { buildMonthSelect(); } catch(e) { showToast('select에러:'+e.message,true); }
     await loadProfile();
     render();
   }
