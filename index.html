@@ -1426,11 +1426,24 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      const dataUrl = ev.target.result;
-      pendingAvatarData = dataUrl;
-      // 편집 모드 아바타 미리보기
-      const editAv = document.getElementById('myAvatarEdit');
-      if (editAv) editAv.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+      // 캔버스로 압축 (최대 200x200, JPEG 0.7)
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 200;
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        // 정사각형 크롭
+        const min = Math.min(img.width, img.height);
+        const sx = (img.width - min) / 2;
+        const sy = (img.height - min) / 2;
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        pendingAvatarData = dataUrl;
+        const editAv = document.getElementById('myAvatarEdit');
+        if (editAv) editAv.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+      };
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   }
