@@ -756,7 +756,7 @@
   async function loadProfile() {
     try {
       const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-      if (error) { console.error('loadProfile error:', error); return; }
+      if (error) { showToast('불러오기 실패: ' + error.message, true); return; }
       if (data) {
         const nickname = data.nickname || currentUser.user_metadata?.full_name?.split(' ')[0] || '사용자';
         const bio = data.bio || '';
