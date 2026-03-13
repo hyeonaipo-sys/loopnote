@@ -644,7 +644,7 @@
         <div class="step-text"><strong>Last.fm 유저네임 입력</strong><br>
           <div style="display:flex;gap:8px;margin-top:8px">
             <input class="my-input" type="text" id="ytLfmInput" placeholder="Last.fm 유저네임" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;flex:1"/>
-            <button onclick="showToast('버튼눌림');connectYTMusic()" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">연결</button>
+            <button onclick="connectYTMusic()" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">연결</button>
           </div>
         </div>
       </div>
@@ -755,7 +755,6 @@
   async function loadProfile() {
     try {
       const res = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-      showToast('결과:' + JSON.stringify({d:!!res.data, e:res.error?.code, nick:res.data?.nickname}));
       if (res.data) {
         applyProfile({ nickname: res.data.nickname, bio: res.data.bio, lfm_username: res.data.lfm_username });
       }
