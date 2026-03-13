@@ -513,10 +513,6 @@
       <div id="profileView" style="display:flex;align-items:center;gap:20px;width:100%">
         <div class="my-avatar-wrap">
           <div class="my-avatar" id="myAvatarDisplay">P</div>
-          <button class="my-avatar-edit" onclick="document.getElementById('avatarInput').click()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
-          </button>
-          <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarChange(event)"/>
         </div>
         <div>
           <div class="my-name" id="myNameDisplay">미리보기</div>
@@ -525,20 +521,24 @@
       </div>
 
       <!-- 편집 모드 -->
-      <div id="profileEditForm" style="display:none;width:100%">
-        <div class="my-avatar-wrap" style="flex-shrink:0;margin-bottom:0">
-          <div class="my-avatar" id="myAvatarEdit">P</div>
-          <button class="my-avatar-edit" onclick="document.getElementById('avatarInput').click()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
-          </button>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:10px">
-          <input class="profile-inline-input" type="text" id="myNameInput" placeholder="이름 / 닉네임"/>
-          <input class="profile-inline-input" type="text" id="myBioInput" placeholder="한줄 소개"/>
-          <div style="display:flex;gap:8px">
-            <button onclick="saveProfile()" style="flex:1;background:var(--accent);border:none;color:#fff;border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">저장</button>
-            <button onclick="toggleProfileEdit()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">취소</button>
+      <div id="profileEditForm" style="display:none;flex-direction:column;gap:14px;width:100%">
+        <!-- 사진 + 이름/소개 -->
+        <div style="display:flex;align-items:center;gap:16px">
+          <div class="my-avatar-wrap" style="flex-shrink:0">
+            <div class="my-avatar" id="myAvatarEdit" onclick="document.getElementById('avatarInput').click()" style="cursor:pointer">P</div>
+            <button class="my-avatar-edit" onclick="document.getElementById('avatarInput').click()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            </button>
+            <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarChange(event)"/>
           </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+            <input class="profile-inline-input" type="text" id="myNameInput" placeholder="이름 / 닉네임"/>
+            <input class="profile-inline-input" type="text" id="myBioInput" placeholder="한줄 소개"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="saveProfile()" style="flex:1;background:var(--accent);border:none;color:#fff;border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">저장</button>
+          <button onclick="toggleProfileEdit()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">취소</button>
         </div>
       </div>
     </div>
@@ -769,9 +769,16 @@
     document.getElementById('myNameDisplay').textContent = nickname;
     document.getElementById('myBioDisplay').textContent = bio || '한줄 소개를 추가해보세요';
     document.getElementById('myBioDisplay').style.color = bio ? 'var(--text)' : 'var(--muted)';
-    document.getElementById('myAvatarDisplay').textContent = nickname[0]?.toUpperCase() || '?';
     document.getElementById('userName').textContent = nickname;
     document.getElementById('userInitial').textContent = nickname[0]?.toUpperCase() || '?';
+
+    // 사진 적용
+    const av = document.getElementById('myAvatarDisplay');
+    if (p.avatar_url) {
+      av.innerHTML = `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+    } else {
+      av.textContent = nickname[0]?.toUpperCase() || '?';
+    }
 
     if (lfmUser) {
       document.getElementById('ytmusic-status').textContent = `@${lfmUser} 연결됨`;
@@ -786,25 +793,34 @@
     const name = document.getElementById('myNameInput').value.trim() || currentUser.user_metadata?.full_name?.split(' ')[0] || '사용자';
     const bio = document.getElementById('myBioInput').value.trim();
 
+    // 사진 적용
+    if (pendingAvatarData) {
+      const av = document.getElementById('myAvatarDisplay');
+      av.innerHTML = `<img src="${pendingAvatarData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+    } else {
+      document.getElementById('myAvatarDisplay').textContent = name[0]?.toUpperCase() || '?';
+    }
+
     document.getElementById('myNameDisplay').textContent = name;
     document.getElementById('myBioDisplay').textContent = bio || '한줄 소개를 추가해보세요';
     document.getElementById('myBioDisplay').style.color = bio ? 'var(--text)' : 'var(--muted)';
-    document.getElementById('myAvatarDisplay').textContent = name[0]?.toUpperCase() || '?';
-    document.getElementById('myAvatarEdit') && (document.getElementById('myAvatarEdit').textContent = name[0]?.toUpperCase() || '?');
     document.getElementById('userName').textContent = name;
     document.getElementById('userInitial').textContent = name[0]?.toUpperCase() || '?';
     document.getElementById('profileEditForm').style.display = 'none';
     document.getElementById('profileView').style.display = 'flex';
 
     try {
-      const { error } = await sb.from('profiles').upsert({
+      const upsertData = {
         id: currentUser.id,
         nickname: name,
         bio: bio,
         lfm_username: lfmUser || null,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
-      if (error) { showToast('❌ ' + error.message, true); return; }
+      };
+      if (pendingAvatarData) upsertData.avatar_url = pendingAvatarData;
+      const { error } = await sb.from('profiles').upsert(upsertData, { onConflict: 'id' });
+      if (error && !error.message.includes('avatar_url')) { showToast('❌ ' + error.message, true); return; }
+      pendingAvatarData = null;
       showToast('✅ 저장됐어요!');
     } catch(e) {
       showToast('❌ ' + e.message, true);
@@ -1403,13 +1419,18 @@
     }
   }
 
+  let pendingAvatarData = null;
+
   function handleAvatarChange(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      const av = document.getElementById('myAvatarDisplay');
-      av.innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+      const dataUrl = ev.target.result;
+      pendingAvatarData = dataUrl;
+      // 편집 모드 아바타 미리보기
+      const editAv = document.getElementById('myAvatarEdit');
+      if (editAv) editAv.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
     };
     reader.readAsDataURL(file);
   }
