@@ -781,6 +781,7 @@
   }
 
   async function saveProfile() {
+    if (!currentUser) { showToast('❌ 로그인 필요', true); return; }
     const name = document.getElementById('myNameInput').value.trim() || currentUser.user_metadata?.full_name?.split(' ')[0] || '사용자';
     const bio = document.getElementById('myBioInput').value.trim();
 
