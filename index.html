@@ -745,10 +745,69 @@
     const short = name.split(' ')[0];
     document.getElementById('userName').textContent = short;
     document.getElementById('userInitial').textContent = short[0]?.toUpperCase() || '?';
-    lfmUser = localStorage.getItem(`loopnote_lfm_${currentUser.id}`) || '';
+    lfmUser = '';
     updateTrackingBanner();
     buildMonthSlider();
     buildMonthSelect();
+    loadProfile().then(() => render());
+  }
+
+  async function loadProfile() {
+    try {
+      const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+      if (data) {
+        const nickname = data.nickname || currentUser.user_metadata?.full_name?.split(' ')[0] || '사용자';
+        const bio = data.bio || '';
+        lfmUser = data.lfm_username || '';
+
+        document.getElementById('myNameDisplay').textContent = nickname;
+        document.getElementById('myBioDisplay').textContent = bio || '한줄 소개를 추가해보세요';
+        document.getElementById('myBioDisplay').style.color = bio ? 'var(--text)' : 'var(--muted)';
+        document.getElementById('myAvatarDisplay').textContent = nickname[0]?.toUpperCase() || '?';
+        document.getElementById('userName').textContent = nickname;
+        document.getElementById('userInitial').textContent = nickname[0]?.toUpperCase() || '?';
+
+        if (lfmUser) {
+          document.getElementById('ytmusic-status').textContent = `@${lfmUser} 연결됨`;
+          document.getElementById('ytmusic-status').className = 'my-connect-status connected';
+          document.getElementById('ytmusic-btn').textContent = '연결됨';
+          document.getElementById('ytmusic-btn').className = 'my-connect-btn connected';
+        }
+        updateTrackingBanner();
+      }
+    } catch(e) {}
+  }
+
+  async function saveProfile() {
+    const name = document.getElementById('myNameInput').value.trim() || currentUser.user_metadata?.full_name?.split(' ')[0] || '사용자';
+    const bio = document.getElementById('myBioInput').value.trim();
+
+    document.getElementById('myNameDisplay').textContent = name;
+    document.getElementById('myBioDisplay').textContent = bio || '한줄 소개를 추가해보세요';
+    document.getElementById('myBioDisplay').style.color = bio ? 'var(--text)' : 'var(--muted)';
+    document.getElementById('myAvatarDisplay').textContent = name[0]?.toUpperCase() || '?';
+    document.getElementById('myAvatarEdit').textContent = name[0]?.toUpperCase() || '?';
+    document.getElementById('userName').textContent = name;
+    document.getElementById('userInitial').textContent = name[0]?.toUpperCase() || '?';
+    document.getElementById('profileEditForm').style.display = 'none';
+    document.getElementById('profileView').style.display = 'flex';
+
+    await sb.from('profiles').upsert({ id: currentUser.id, nickname: name, bio, updated_at: new Date().toISOString() });
+    showToast('프로필 저장됐어요!');
+  }
+
+  async function connectYTMusic() {
+    const username = document.getElementById('ytLfmInput').value.trim();
+    if (!username) { showToast('유저네임을 입력해주세요'); return; }
+    lfmUser = username;
+    await sb.from('profiles').upsert({ id: currentUser.id, lfm_username: username, updated_at: new Date().toISOString() });
+    closeYTModal();
+    document.getElementById('ytmusic-status').textContent = `@${username} 연결됨`;
+    document.getElementById('ytmusic-status').className = 'my-connect-status connected';
+    document.getElementById('ytmusic-btn').textContent = '연결됨';
+    document.getElementById('ytmusic-btn').className = 'my-connect-btn connected';
+    updateTrackingBanner();
+    showToast(`YouTube Music 연결됐어요!`);
     render();
   }
 
@@ -967,19 +1026,6 @@
   function closeYTModal() {
     document.getElementById('ytMusicModal').classList.remove('open');
   }
-  function connectYTMusic() {
-    const username = document.getElementById('ytLfmInput').value.trim();
-    if (!username) { showToast('유저네임을 입력해주세요'); return; }
-    lfmUser = username;
-    closeYTModal();
-    document.getElementById('ytmusic-status').textContent = `@${username} 연결됨`;
-    document.getElementById('ytmusic-status').className = 'my-connect-status connected';
-    document.getElementById('ytmusic-btn').textContent = '연결됨';
-    document.getElementById('ytmusic-btn').className = 'my-connect-btn connected';
-    showToast(`YouTube Music 연결됐어요!`);
-    render();
-  }
-
   // TAKEOUT IMPORT
   function triggerTakeout(type) {
     document.getElementById(`takeout-${type}`).click();
@@ -1278,21 +1324,6 @@
       view.style.display = 'none';
       form.style.display = 'flex';
     }
-  }
-
-  function saveProfile() {
-    const name = document.getElementById('myNameInput').value.trim() || '미리보기';
-    const bio = document.getElementById('myBioInput').value.trim();
-    document.getElementById('myNameDisplay').textContent = name;
-    document.getElementById('myBioDisplay').textContent = bio || '한줄 소개를 추가해보세요';
-    document.getElementById('myBioDisplay').style.color = bio ? 'var(--text)' : 'var(--muted)';
-    document.getElementById('myAvatarDisplay').textContent = name[0]?.toUpperCase() || 'P';
-    document.getElementById('myAvatarEdit').textContent = name[0]?.toUpperCase() || 'P';
-    document.getElementById('userName').textContent = name.split(' ')[0];
-    document.getElementById('userInitial').textContent = name[0]?.toUpperCase() || 'P';
-    document.getElementById('profileEditForm').style.display = 'none';
-    document.getElementById('profileView').style.display = 'flex';
-    showToast('프로필 저장됐어요!');
   }
 
   function handleAvatarChange(e) {
