@@ -707,10 +707,11 @@
     }
 
     sb.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+      if (session?.user && !currentUser) {
+        // 새로 로그인한 경우에만 showApp 호출
         currentUser = session.user;
         showApp();
-      } else {
+      } else if (!session?.user) {
         currentUser = null;
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'none';
