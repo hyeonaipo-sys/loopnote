@@ -1446,7 +1446,8 @@
     setTimeout(() => t.classList.remove('show'), 2400);
   }
 
-  document.getElementById('trackingModal').addEventListener('click', e => {
+  const _tm = document.getElementById('trackingModal');
+  if (_tm) _tm.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeTrackingModal();
   });
 
