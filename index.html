@@ -1181,7 +1181,24 @@
           </div>
           <div style="margin-top:14px;font-size:12px;color:var(--muted)">가장 많이 들은 곡: <span style="color:var(--text)">${trackList[0]?.title || '—'}</span> — ${trackList[0]?.artist || ''}</div>
         </div>`;
-      showToast(`${plays.length.toLocaleString()}개 기록 불러왔어요!`);
+      // Supabase에 저장 (배치로 1000개씩)
+      try {
+        const rows = plays.map(p => ({
+          user_id: currentUser.id,
+          title: p.title,
+          artist: p.artist,
+          played_at: p.played_at
+        }));
+        const batchSize = 1000;
+        for (let i = 0; i < rows.length; i += batchSize) {
+          const batch = rows.slice(i, i + batchSize);
+          await sb.from('plays').insert(batch);
+        }
+        showToast(`${plays.length.toLocaleString()}개 기록 저장됐어요!`);
+        render();
+      } catch(saveErr) {
+        showToast(`${plays.length.toLocaleString()}개 불러왔어요! (저장 실패)`);
+      }
     } catch(err) {
       showToast('파일 형식을 확인해주세요', true);
     }
