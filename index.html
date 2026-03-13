@@ -573,11 +573,11 @@
             </div>
             <div>
               <div class="my-connect-name">YouTube Music</div>
-              <div class="my-connect-status">Google Takeout JSON</div>
+              <div class="my-connect-status">Google Takeout JSON / CSV</div>
             </div>
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <input type="file" id="takeout-google" accept=".json" style="display:none" onchange="handleTakeout(event,'google')"/>
+          <input type="file" id="takeout-google" accept=".json,.csv" style="display:none" onchange="handleTakeout(event,'google')"/>
         </div>
       </div>
       <div id="takeoutResult"></div>
@@ -1040,14 +1040,28 @@
 
     try {
       if (type === 'google') {
-        const json = JSON.parse(text);
-        plays = (Array.isArray(json) ? json : []).filter(item =>
-          item.titleUrl?.includes('music.youtube') || item.subtitles
-        ).map(item => ({
-          title: item.title?.replace('Watched ', '') || '알 수 없음',
-          artist: item.subtitles?.[0]?.name || '알 수 없음',
-          played_at: item.time || new Date().toISOString()
-        }));
+        const isCSV = file.name.endsWith('.csv');
+        if (isCSV) {
+          const lines = text.split('\n').slice(1).filter(l => l.trim());
+          plays = lines.map(l => {
+            // CSV 컬럼: 제목, URL, 날짜 등
+            const cols = l.match(/(".*?"|[^,]+)/g)?.map(s => s.replace(/^"|"$/g, '').trim()) || [];
+            return {
+              title: cols[0]?.replace(/^시청함:\s*/, '').replace(/^Watched\s*/, '') || '알 수 없음',
+              artist: cols[1] || '알 수 없음',
+              played_at: cols[2] || new Date().toISOString()
+            };
+          }).filter(p => p.title && p.title !== '알 수 없음');
+        } else {
+          const json = JSON.parse(text);
+          plays = (Array.isArray(json) ? json : []).filter(item =>
+            item.titleUrl?.includes('music.youtube') || item.subtitles
+          ).map(item => ({
+            title: item.title?.replace('Watched ', '').replace('시청함: ', '') || '알 수 없음',
+            artist: item.subtitles?.[0]?.name || '알 수 없음',
+            played_at: item.time || new Date().toISOString()
+          }));
+        }
       } else if (type === 'spotify') {
         const json = JSON.parse(text);
         plays = (Array.isArray(json) ? json : []).filter(i => i.ms_played > 30000).map(i => ({
