@@ -1085,40 +1085,54 @@
           // Google Takeout 시청기록 HTML 파싱
           const parser = new DOMParser();
           const doc = parser.parseFromString(text, 'text/html');
+
+          function parseDateFromText(fullText) {
+            // 형식1: 2026. 3. 13. 오후 6:00:00 KST
+            const m1 = fullText.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후|AM|PM)\s*(\d+):(\d+):(\d+)/);
+            if (m1) {
+              let [, y, mo, d, ampm, h, mi, s] = m1;
+              h = parseInt(h);
+              if ((ampm === '오후' || ampm === 'PM') && h !== 12) h += 12;
+              if ((ampm === '오전' || ampm === 'AM') && h === 12) h = 0;
+              const dt = new Date(y, mo-1, d, h, mi, s);
+              if (!isNaN(dt)) return dt.toISOString();
+            }
+            // 형식2: 2026. 3. 13.
+            const m2 = fullText.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\./);
+            if (m2) {
+              const dt = new Date(m2[1], m2[2]-1, m2[3]);
+              if (!isNaN(dt)) return dt.toISOString();
+            }
+            // 형식3: Jan 13, 2026
+            const m3 = fullText.match(/([A-Za-z]+ \d{1,2}, \d{4})/);
+            if (m3) {
+              const dt = new Date(m3[1]);
+              if (!isNaN(dt)) return dt.toISOString();
+            }
+            return null;
+          }
+
           const cells = doc.querySelectorAll('.mdl-grid > .mdl-cell, .content-cell');
           cells.forEach(cell => {
             const links = cell.querySelectorAll('a');
             if (links.length < 1) return;
-            const titleEl = links[0];
-            const artistEl = links[1];
-            const title = titleEl?.textContent?.trim();
-            const artist = artistEl?.textContent?.trim() || '알 수 없음';
-            // 날짜 텍스트 찾기
+            const title = links[0]?.textContent?.trim();
+            const artist = links[1]?.textContent?.trim() || '알 수 없음';
             const fullText = cell.textContent || '';
-            const dateMatch = fullText.match(/(\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.?\s*(?:AM|PM|오전|오후)\s*\d+:\d+:\d+\s*\w+)/);
-            let played_at = new Date().toISOString();
-            if (dateMatch) {
-              const d = new Date(dateMatch[1].replace(/\./g, '/').replace('오전', 'AM').replace('오후', 'PM'));
-              if (!isNaN(d)) played_at = d.toISOString();
-            }
+            const played_at = parseDateFromText(fullText) || new Date().toISOString();
             if (title && title.length > 0) plays.push({ title, artist, played_at });
           });
-          // YouTube Music만 필터 (헤더 텍스트로 구분)
+          // 대안 파싱
           if (plays.length === 0) {
-            // 대안: 모든 링크 파싱
             const allCells = doc.querySelectorAll('div');
             allCells.forEach(div => {
-              const header = div.querySelector('p, h1, h2');
               const links = div.querySelectorAll('a');
               if (links.length < 1) return;
               const title = links[0]?.textContent?.trim();
               const artist = links[1]?.textContent?.trim() || '알 수 없음';
               const fullText = div.textContent || '';
-              const dateMatch = fullText.match(/\d{4}\.\s*\d{1,2}\.\s*\d{1,2}/);
-              if (title && dateMatch) {
-                const d = new Date(dateMatch[0].replace(/\./g, '-'));
-                plays.push({ title, artist, played_at: isNaN(d) ? new Date().toISOString() : d.toISOString() });
-              }
+              const played_at = parseDateFromText(fullText);
+              if (title && played_at) plays.push({ title, artist, played_at });
             });
           }
         } else if (isCSV) {
