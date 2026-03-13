@@ -795,16 +795,19 @@
     document.getElementById('profileEditForm').style.display = 'none';
     document.getElementById('profileView').style.display = 'flex';
 
-    const { data: existing } = await sb.from('profiles').select('*').eq('id', currentUser.id).single().catch(() => ({ data: null }));
-    const { error } = await sb.from('profiles').upsert({
-      id: currentUser.id,
-      nickname: name,
-      bio,
-      lfm_username: existing?.lfm_username || lfmUser || null,
-      updated_at: new Date().toISOString()
-    });
-    if (error) { showToast('❌ ' + error.message, true); return; }
-    showToast('✅ 저장됐어요!');
+    try {
+      const { error } = await sb.from('profiles').upsert({
+        id: currentUser.id,
+        nickname: name,
+        bio: bio,
+        lfm_username: lfmUser || null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+      if (error) { showToast('❌ ' + error.message, true); return; }
+      showToast('✅ 저장됐어요!');
+    } catch(e) {
+      showToast('❌ ' + e.message, true);
+    }
   }
 
   async function connectYTMusic() {
