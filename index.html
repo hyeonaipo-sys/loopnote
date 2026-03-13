@@ -902,6 +902,21 @@
   }
 
   // SUPABASE DATA - 실제
+  const lfmImageCache = {};
+  async function fetchLfmImage(title, artist) {
+    const key = `${title}__${artist}`;
+    if (lfmImageCache[key] !== undefined) return lfmImageCache[key];
+    try {
+      const url = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LFM_API_KEY}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const imgs = data?.track?.album?.image;
+      const img = imgs ? (imgs.find(i => i.size === 'large') || imgs[imgs.length-1])?.['#text'] : '';
+      lfmImageCache[key] = img || '';
+      return lfmImageCache[key];
+    } catch(e) { lfmImageCache[key] = ''; return ''; }
+  }
+
   async function fetchSupabaseTracks(year, month) {
     const from = new Date(year, month, 1).toISOString();
     const to = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
@@ -917,7 +932,12 @@
       if (!counts[key]) counts[key] = { title: p.title, artist: p.artist, count: 0, image: '' };
       counts[key].count++;
     });
-    return Object.values(counts).sort((a, b) => b.count - a.count);
+    const tracks = Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 10);
+    // Last.fm에서 이미지 가져오기 (병렬)
+    await Promise.all(tracks.map(async t => {
+      t.image = await fetchLfmImage(t.title, t.artist);
+    }));
+    return tracks;
   }
 
   // MONTH SCROLL
