@@ -754,6 +754,7 @@
   }
 
   async function loadProfile() {
+    showToast('loadProfile 시작');
     try {
       const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
       if (error) { showToast('로드실패:' + error.code, true); return; }
