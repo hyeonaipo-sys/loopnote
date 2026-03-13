@@ -754,21 +754,14 @@
 
   async function loadProfile() {
     try {
-      // 먼저 localStorage에서 불러오기 (빠름)
-      const key = 'loopnote_profile_' + currentUser.id;
-      const cached = localStorage.getItem(key);
-      if (cached) {
-        const p = JSON.parse(cached);
-        applyProfile(p);
-      }
-      // Supabase에서도 불러오기 (최신 데이터)
-      const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single().catch(() => ({ data: null }));
+      const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+      if (error) { showToast('로드실패:' + error.code, true); return; }
       if (data) {
-        const p = { nickname: data.nickname, bio: data.bio, lfm_username: data.lfm_username };
-        localStorage.setItem(key, JSON.stringify(p));
-        applyProfile(p);
+        applyProfile({ nickname: data.nickname, bio: data.bio, lfm_username: data.lfm_username });
+      } else {
+        showToast('데이터없음', true);
       }
-    } catch(e) { console.error('loadProfile error:', e); }
+    } catch(e) { showToast('에러:' + e.message, true); }
   }
 
   function applyProfile(p) {
