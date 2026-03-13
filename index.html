@@ -756,7 +756,7 @@
     try {
       const res = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
       if (res.data) {
-        applyProfile({ nickname: res.data.nickname, bio: res.data.bio, lfm_username: res.data.lfm_username });
+        applyProfile({ nickname: res.data.nickname, bio: res.data.bio, lfm_username: res.data.lfm_username, avatar_url: res.data.avatar_url });
       }
     } catch(e) { showToast('에러:' + e.message, true); }
   }
