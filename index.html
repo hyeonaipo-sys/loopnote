@@ -954,10 +954,10 @@
   }
 
   function showYTLoginModal() {
-    document.getElementById('ytMusicModal').style.display = 'flex';
+    document.getElementById('ytMusicModal').classList.add('open');
   }
   function closeYTModal() {
-    document.getElementById('ytMusicModal').style.display = 'none';
+    document.getElementById('ytMusicModal').classList.remove('open');
   }
   function connectYTMusic() {
     const username = document.getElementById('ytLfmInput').value.trim();
