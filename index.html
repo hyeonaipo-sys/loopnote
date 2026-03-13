@@ -536,7 +536,7 @@
           <input class="profile-inline-input" type="text" id="myNameInput" placeholder="이름 / 닉네임"/>
           <input class="profile-inline-input" type="text" id="myBioInput" placeholder="한줄 소개"/>
           <div style="display:flex;gap:8px">
-            <button onclick="alert('버튼눌림'); saveProfile()" style="flex:1;background:var(--accent);border:none;color:#fff;border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">저장</button>
+            <button onclick="saveProfile()" style="flex:1;background:var(--accent);border:none;color:#fff;border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">저장</button>
             <button onclick="toggleProfileEdit()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">취소</button>
           </div>
         </div>
@@ -802,8 +802,8 @@
       lfm_username: existing?.lfm_username || lfmUser || null,
       updated_at: new Date().toISOString()
     });
-    if (error) { console.error('saveProfile error:', error); showToast('저장 실패 😢 콘솔 확인해요'); return; }
-    showToast('프로필 저장됐어요!');
+    if (error) { showToast('❌ ' + error.message, true); return; }
+    showToast('✅ 저장됐어요!');
   }
 
   async function connectYTMusic() {
