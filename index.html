@@ -754,7 +754,8 @@
 
   async function loadProfile() {
     try {
-      const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+      const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+      if (error) { console.error('loadProfile error:', error); return; }
       if (data) {
         const nickname = data.nickname || currentUser.user_metadata?.full_name?.split(' ')[0] || '사용자';
         const bio = data.bio || '';
@@ -775,7 +776,7 @@
         }
         updateTrackingBanner();
       }
-    } catch(e) {}
+    } catch(e) { console.error('loadProfile catch:', e); }
   }
 
   async function saveProfile() {
@@ -792,15 +793,15 @@
     document.getElementById('profileEditForm').style.display = 'none';
     document.getElementById('profileView').style.display = 'flex';
 
-    // 기존 데이터 먼저 가져와서 병합
     const { data: existing } = await sb.from('profiles').select('*').eq('id', currentUser.id).single().catch(() => ({ data: null }));
-    await sb.from('profiles').upsert({
+    const { error } = await sb.from('profiles').upsert({
       id: currentUser.id,
       nickname: name,
       bio,
       lfm_username: existing?.lfm_username || lfmUser || null,
       updated_at: new Date().toISOString()
     });
+    if (error) { console.error('saveProfile error:', error); showToast('저장 실패 😢 콘솔 확인해요'); return; }
     showToast('프로필 저장됐어요!');
   }
 
