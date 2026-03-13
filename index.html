@@ -644,7 +644,7 @@
         <div class="step-text"><strong>Last.fm 유저네임 입력</strong><br>
           <div style="display:flex;gap:8px;margin-top:8px">
             <input class="my-input" type="text" id="ytLfmInput" placeholder="Last.fm 유저네임" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;flex:1"/>
-            <button onclick="connectYTMusic()" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">연결</button>
+            <button onclick="showToast('버튼눌림');connectYTMusic()" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:-apple-system,sans-serif">연결</button>
           </div>
         </div>
       </div>
@@ -738,7 +738,6 @@
   }
 
   async function showApp() {
-    showToast('showApp 실행됨');
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     document.querySelector('.bottom-tab-bar').style.display = 'flex';
@@ -747,21 +746,18 @@
     document.getElementById('userName').textContent = short;
     document.getElementById('userInitial').textContent = short[0]?.toUpperCase() || '?';
     lfmUser = '';
-    try { buildMonthSlider(); } catch(e) { showToast('slider에러:'+e.message,true); }
-    try { buildMonthSelect(); } catch(e) { showToast('select에러:'+e.message,true); }
+    try { buildMonthSlider(); } catch(e) { console.error(e); }
+    try { buildMonthSelect(); } catch(e) { console.error(e); }
     await loadProfile();
     render();
   }
 
   async function loadProfile() {
-    showToast('loadProfile 시작');
     try {
-      const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-      if (error) { showToast('로드실패:' + error.code, true); return; }
-      if (data) {
-        applyProfile({ nickname: data.nickname, bio: data.bio, lfm_username: data.lfm_username });
-      } else {
-        showToast('데이터없음', true);
+      const res = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+      showToast('결과:' + JSON.stringify({d:!!res.data, e:res.error?.code, nick:res.data?.nickname}));
+      if (res.data) {
+        applyProfile({ nickname: res.data.nickname, bio: res.data.bio, lfm_username: res.data.lfm_username });
       }
     } catch(e) { showToast('에러:' + e.message, true); }
   }
@@ -810,9 +806,6 @@
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       if (error) { showToast('❌ ' + error.message, true); return; }
-      // localStorage에도 저장
-      const key = 'loopnote_profile_' + currentUser.id;
-      localStorage.setItem(key, JSON.stringify({ nickname: name, bio: bio, lfm_username: lfmUser || null }));
       showToast('✅ 저장됐어요!');
     } catch(e) {
       showToast('❌ ' + e.message, true);
@@ -824,20 +817,13 @@
     if (!username) { showToast('유저네임을 입력해주세요'); return; }
     lfmUser = username;
 
-    // localStorage에 저장
-    const key = 'loopnote_profile_' + currentUser.id;
-    const cached = JSON.parse(localStorage.getItem(key) || '{}');
-    cached.lfm_username = username;
-    localStorage.setItem(key, JSON.stringify(cached));
-
-    // Supabase에도 저장
-    await sb.from('profiles').upsert({
-      id: currentUser.id,
-      nickname: cached.nickname || null,
-      bio: cached.bio || null,
-      lfm_username: username,
-      updated_at: new Date().toISOString()
-    }).catch(e => console.error(e));
+    try {
+      await sb.from('profiles').upsert({
+        id: currentUser.id,
+        lfm_username: username,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id', ignoreDuplicates: false });
+    } catch(e) { console.error(e); }
 
     closeYTModal();
     document.getElementById('ytmusic-status').textContent = `@${username} 연결됨`;
