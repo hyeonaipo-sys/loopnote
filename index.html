@@ -984,7 +984,7 @@
     // Pinterest-style varying heights
     const heights = [140, 180, 120, 200, 150, 130, 170, 160, 190, 145, 175, 125];
 
-    tracks.slice(0, 30).forEach((track, i) => {
+    tracks.slice(0, 10).forEach((track, i) => {
       const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
       const pct = Math.round((track.count / maxCount) * 100);
       const heights = [140, 170, 120, 160, 150, 130, 180, 145, 165, 125, 155, 135];
@@ -1197,7 +1197,15 @@
         </div>`;
       // Supabase에 저장 (배치로 1000개씩)
       try {
-        const rows = plays.map(p => ({
+        // YouTube 일반 영상 필터링 (뮤직 관련만)
+        const filteredPlays = plays.filter(p => {
+          const t = p.title.toLowerCase();
+          // 제외: 광고, Shorts, 일반 영상 패턴
+          if (t.startsWith('시청함:') || t.startsWith('watched ')) return false;
+          if (t.includes('shorts') && !t.includes('music')) return false;
+          return p.title && p.title !== '알 수 없음';
+        });
+        const rows = filteredPlays.map(p => ({
           user_id: currentUser.id,
           title: p.title,
           artist: p.artist,
