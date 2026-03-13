@@ -700,17 +700,16 @@
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
       currentUser = session.user;
-      showApp();
+      await showApp();
     } else {
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'none';
     }
 
-    sb.auth.onAuthStateChange((_event, session) => {
-      if (session?.user && !currentUser) {
-        // 새로 로그인한 경우에만 showApp 호출
+    sb.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user && _event === 'SIGNED_IN') {
         currentUser = session.user;
-        showApp();
+        await showApp();
       } else if (!session?.user) {
         currentUser = null;
         document.getElementById('loginScreen').style.display = 'flex';
@@ -738,7 +737,7 @@
     showToast('로그아웃됐어요');
   }
 
-  function showApp() {
+  async function showApp() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     document.querySelector('.bottom-tab-bar').style.display = 'flex';
@@ -747,10 +746,10 @@
     document.getElementById('userName').textContent = short;
     document.getElementById('userInitial').textContent = short[0]?.toUpperCase() || '?';
     lfmUser = '';
-    updateTrackingBanner();
     buildMonthSlider();
     buildMonthSelect();
-    loadProfile().then(() => render());
+    await loadProfile();
+    render();
   }
 
   async function loadProfile() {
