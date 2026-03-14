@@ -907,13 +907,28 @@
     const key = `${title}__${artist}`;
     if (lfmImageCache[key] !== undefined) return lfmImageCache[key];
     try {
+      // 1. iTunes Search API로 먼저 시도 (가장 정확)
+      const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(artist + ' ' + title)}&media=music&limit=1`;
+      const itunesRes = await fetch(itunesUrl);
+      const itunesData = await itunesRes.json();
+      const itunesImg = itunesData?.results?.[0]?.artworkUrl100?.replace('100x100', '400x400');
+      if (itunesImg) {
+        lfmImageCache[key] = itunesImg;
+        return itunesImg;
+      }
+      // 2. Last.fm fallback
       const url = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LFM_API_KEY}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json`;
       const res = await fetch(url);
       const data = await res.json();
       const imgs = data?.track?.album?.image;
-      const img = imgs ? (imgs.find(i => i.size === 'large') || imgs[imgs.length-1])?.['#text'] : '';
-      lfmImageCache[key] = img || '';
-      return lfmImageCache[key];
+      const img = imgs ? (imgs.find(i => i.size === 'extralarge') || imgs.find(i => i.size === 'large'))?.['#text'] : '';
+      // Last.fm 기본 이미지 제외
+      if (img && !img.includes('2a96cbd8b46e442fc41c2b86b821562f')) {
+        lfmImageCache[key] = img;
+        return img;
+      }
+      lfmImageCache[key] = '';
+      return '';
     } catch(e) { lfmImageCache[key] = ''; return ''; }
   }
 
@@ -1011,9 +1026,9 @@
       const card = document.createElement('div');
       card.className = 'chart-card';
       card.style.animationDelay = `${i * 0.04}s`;
-      const lnPlaceholder = `<div class="card-img-placeholder" style="height:${h}px;background:#111;flex-direction:column;gap:4px"><span style="font-family:'Righteous',sans-serif;font-size:28px;color:#e8325a;text-shadow:0 0 10px #e8325a88">LN</span></div>`;
+      const lnPlaceholder = `<div class="card-img-placeholder" style="height:${h}px;background:#111;flex-direction:column;gap:4px"><span style="font-size:11px;color:var(--muted);letter-spacing:2px;font-weight:400">LN</span></div>`;
       const imgHtml = track.image
-        ? `<img src="${track.image}" alt="${track.title}" loading="lazy" style="height:${h}px;width:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-img-placeholder" style="display:none;height:${h}px;background:#111;flex-direction:column"><span style="font-family:'Righteous',sans-serif;font-size:28px;color:#e8325a;text-shadow:0 0 10px #e8325a88">LN</span></div>`
+        ? `<img src="${track.image}" alt="${track.title}" loading="lazy" style="height:${h}px;width:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-img-placeholder" style="display:none;height:${h}px;background:#111;flex-direction:column"><span style="font-size:11px;color:var(--muted);letter-spacing:2px;font-weight:400">LN</span></div>`
         : lnPlaceholder;
       card.innerHTML = `
         <div class="card-img-wrap">${imgHtml}<div class="rank-badge ${rankClass}">${i+1}</div></div>
