@@ -128,7 +128,7 @@
     .section-heading .sub { font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
 
     /* PINTEREST GRID */
-    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; align-items: start; }
+    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; align-items: start; }
     @media (max-width: 600px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } .stats-row { grid-template-columns: repeat(2, 1fr); } }
     .chart-card { margin-bottom: 0; background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s; animation: fadeUp 0.4s ease both; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -1011,13 +1011,10 @@
       const card = document.createElement('div');
       card.className = 'chart-card';
       card.style.animationDelay = `${i * 0.04}s`;
-      const colors = ['#e8325a','#9b59b6','#3498db','#e67e22','#1abc9c','#e74c3c','#2980b9','#8e44ad','#16a085','#d35400'];
-      const color = colors[(track.artist.charCodeAt(0) || 0) % colors.length];
-      const initials = track.artist.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '♪';
-      const placeholder = `<div class="card-img-placeholder" style="height:${h}px;background:linear-gradient(135deg,${color}22,${color}44);flex-direction:column;gap:6px"><span style="font-size:32px;font-weight:700;color:${color};opacity:0.9">${initials}</span></div>`;
+      const lnPlaceholder = `<div class="card-img-placeholder" style="height:${h}px;background:#111;flex-direction:column;gap:4px"><span style="font-family:'Righteous',sans-serif;font-size:28px;color:#e8325a;text-shadow:0 0 10px #e8325a88">LN</span></div>`;
       const imgHtml = track.image
-        ? `<img src="${track.image}" alt="${track.title}" loading="lazy" style="height:${h}px;width:100%" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-img-placeholder" style="display:none;height:${h}px;background:linear-gradient(135deg,${color}22,${color}44);flex-direction:column"><span style="font-size:32px;font-weight:700;color:${color}">${initials}</span></div>`
-        : placeholder;
+        ? `<img src="${track.image}" alt="${track.title}" loading="lazy" style="height:${h}px;width:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-img-placeholder" style="display:none;height:${h}px;background:#111;flex-direction:column"><span style="font-family:'Righteous',sans-serif;font-size:28px;color:#e8325a;text-shadow:0 0 10px #e8325a88">LN</span></div>`
+        : lnPlaceholder;
       card.innerHTML = `
         <div class="card-img-wrap">${imgHtml}<div class="rank-badge ${rankClass}">${i+1}</div></div>
         <div class="card-body">
