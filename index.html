@@ -429,6 +429,19 @@
 </div>
 
 <!-- BOTTOM TAB BAR -->
+
+<!-- 미니 플레이어 -->
+<div id="miniPlayer" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:500px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+  <iframe id="miniPlayerIframe" style="width:100%;height:200px;display:block;border:none" allowfullscreen allow="autoplay; encrypted-media; fullscreen"></iframe>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+    <div>
+      <div id="miniPlayerTitle" style="font-size:13px;font-weight:600;color:var(--text)"></div>
+      <div id="miniPlayerArtist" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+    </div>
+    <button onclick="closeMiniPlayer()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px">✕</button>
+  </div>
+</div>
+
 <div class="bottom-tab-bar">
   <button class="tab-item active" id="tab-home" onclick="switchTab('home')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -933,14 +946,29 @@
     const key = `${title}__${artist}`;
     if (lfmImageCache[key] !== undefined) return { image: lfmImageCache[key], videoId: ytVideoIdCache[key] };
     try {
+      const BAD = ['2a96cbd8b46e442fc41c2b86b821562f', 'noimage'];
+      const fix = u => (u||'').replace('http://', 'https://');
+
+      // 1. Last.fm 앨범 커버 (가장 정확)
+      let image = '';
+      const r1 = await fetch(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LFM_API_KEY}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json`);
+      const d1 = await r1.json();
+      const imgs1 = d1?.track?.album?.image || [];
+      const img1 = fix((imgs1.find(i=>i.size==='extralarge')||imgs1.find(i=>i.size==='large'))?.['#text']||'');
+      if (img1 && !BAD.some(b=>img1.includes(b))) image = img1;
+
+      // 2. YouTube videoId 가져오기 (재생용)
       const ytRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(title + ' ' + artist + ' official')}&type=video&maxResults=1&key=${YT_API_KEY}`);
       const ytData = await ytRes.json();
       const item = ytData?.items?.[0];
-      const thumb = item?.snippet?.thumbnails?.high?.url || item?.snippet?.thumbnails?.medium?.url || '';
       const videoId = item?.id?.videoId || '';
-      lfmImageCache[key] = thumb;
+
+      // Last.fm 이미지 없으면 YouTube 썸네일 사용
+      if (!image) image = item?.snippet?.thumbnails?.high?.url || '';
+
+      lfmImageCache[key] = image;
       ytVideoIdCache[key] = videoId;
-      return { image: thumb, videoId };
+      return { image, videoId };
     } catch(e) { lfmImageCache[key] = ''; ytVideoIdCache[key] = ''; return { image: '', videoId: '' }; }
   }
 
