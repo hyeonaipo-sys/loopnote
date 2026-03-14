@@ -1559,14 +1559,14 @@
     document.getElementById('miniPlayerTitle').textContent = title;
     document.getElementById('miniPlayerArtist').textContent = artist;
     iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-    player.classList.add('open');
+    player.style.display = 'block';
   }
 
   function closeMiniPlayer() {
     const player = document.getElementById('miniPlayer');
     const iframe = document.getElementById('miniPlayerIframe');
     iframe.src = '';
-    player.classList.remove('open');
+    player.style.display = 'none';
   }
   function handleAvatarChange(e) {
     const file = e.target.files[0];
