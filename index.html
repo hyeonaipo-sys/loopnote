@@ -1115,25 +1115,27 @@
     btn.textContent = '분석 중...';
     result.innerHTML = `<div class="ai-loading"><div class="spinner"></div><span>취향 분석하는 중...</span></div>`;
 
-    const top10 = currentTracks.slice(0, 10).map((t, i) => `${i+1}. ${t.title} - ${t.artist}`).join('\n');
-
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: `이 사람의 이번 달 TOP 10 차트야:\n${top10}\n\n이 취향을 분석해서 비슷한 장르/무드의 새로운 노래 5곡을 추천해줘. 차트에 없는 곡으로만 골라줘.\n\n반드시 아래 JSON 형식으로만 답해줘, 다른 말 없이:\n{"recommendations":[{"title":"곡명","artist":"아티스트","reason":"추천 이유 한 줄 (한국어, 20자 이내)"}]}`
-          }]
-        })
-      });
-      const data = await res.json();
-      const text = data.content[0].text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(text);
-      const recs = parsed.recommendations;
+      // Top 3곡 기준으로 Last.fm 유사곡 추천
+      const top3 = currentTracks.slice(0, 3);
+      const seen = new Set(currentTracks.map(t => t.title.toLowerCase()));
+      const recs = [];
+
+      for (const track of top3) {
+        if (recs.length >= 5) break;
+        const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=track.getsimilar&artist=${encodeURIComponent(track.artist)}&track=${encodeURIComponent(track.title)}&api_key=${LFM_API_KEY}&format=json&limit=5`);
+        const data = await res.json();
+        const similar = data?.similartracks?.track || [];
+        for (const s of similar) {
+          if (recs.length >= 5) break;
+          if (!seen.has(s.name.toLowerCase())) {
+            seen.add(s.name.toLowerCase());
+            recs.push({ title: s.name, artist: s.artist.name, reason: `${track.title}을 좋아한다면` });
+          }
+        }
+      }
+
+      if (recs.length === 0) throw new Error('no results');
 
       result.innerHTML = `<div class="ai-result">${recs.map((r, i) => `
         <div class="ai-rec-card">
