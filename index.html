@@ -326,6 +326,29 @@
     .modal-close:hover { border-color: var(--accent); color: var(--accent); }
 
     @media (max-width: 480px) { .wordmark-main { font-size: 36px; } .form-row { grid-template-columns: 1fr; } .login-card { padding: 28px 24px; } .login-logo { font-size: 52px; } }
+
+    /* 미니 플레이어 */
+    #miniPlayer {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 500px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      z-index: 999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: none;
+    }
+    #miniPlayer.open { display: block; }
+    #miniPlayer iframe { width: 100%; height: 200px; display: block; border: none; }
+    #miniPlayerInfo { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; }
+    #miniPlayerTitle { font-size: 13px; font-weight: 600; color: var(--text); }
+    #miniPlayerArtist { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    #miniPlayerClose { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px; }
   </style>
 </head>
 <body>
@@ -904,26 +927,26 @@
   // SUPABASE DATA - 실제
   const YT_API_KEY = 'AIzaSyC6kdYgPOwqEqBDvYOxgC8SmSgZrK7ynbE';
   const lfmImageCache = {};
-  async function fetchLfmImage(title, artist) {
+  const ytVideoIdCache = {};
+
+  async function fetchYTData(title, artist) {
     const key = `${title}__${artist}`;
-    if (lfmImageCache[key] !== undefined) return lfmImageCache[key];
-    const set = (v) => { lfmImageCache[key] = v; return v; };
+    if (lfmImageCache[key] !== undefined) return { image: lfmImageCache[key], videoId: ytVideoIdCache[key] };
     try {
-      const BAD = ['2a96cbd8b46e442fc41c2b86b821562f', 'noimage'];
-      const fix = u => (u||'').replace('http://', 'https://');
-      // 1. Last.fm track.getInfo
-      const r1 = await fetch(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LFM_API_KEY}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json`);
-      const d1 = await r1.json();
-      const imgs1 = d1?.track?.album?.image || [];
-      const img1 = fix((imgs1.find(i=>i.size==='extralarge')||imgs1.find(i=>i.size==='large'))?.['#text']||'');
-      if (img1 && !BAD.some(b=>img1.includes(b))) return set(img1);
-      // 2. YouTube Data API 썸네일
-      const ytRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(title + ' ' + artist)}&type=video&maxResults=1&key=${YT_API_KEY}`);
+      const ytRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(title + ' ' + artist + ' official')}&type=video&maxResults=1&key=${YT_API_KEY}`);
       const ytData = await ytRes.json();
-      const thumb = ytData?.items?.[0]?.snippet?.thumbnails?.high?.url;
-      if (thumb) return set(thumb);
-      return set('');
-    } catch(e) { return set(''); }
+      const item = ytData?.items?.[0];
+      const thumb = item?.snippet?.thumbnails?.high?.url || item?.snippet?.thumbnails?.medium?.url || '';
+      const videoId = item?.id?.videoId || '';
+      lfmImageCache[key] = thumb;
+      ytVideoIdCache[key] = videoId;
+      return { image: thumb, videoId };
+    } catch(e) { lfmImageCache[key] = ''; ytVideoIdCache[key] = ''; return { image: '', videoId: '' }; }
+  }
+
+  async function fetchLfmImage(title, artist) {
+    const { image } = await fetchYTData(title, artist);
+    return image;
   }
 
   async function fetchSupabaseTracks(year, month) {
@@ -944,7 +967,9 @@
     const tracks = Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 10);
     // Last.fm에서 이미지 가져오기 (병렬)
     await Promise.all(tracks.map(async t => {
-      t.image = await fetchLfmImage(t.title, t.artist);
+      const { image, videoId } = await fetchYTData(t.title, t.artist);
+      t.image = image;
+      t.videoId = videoId;
     }));
     return tracks;
   }
@@ -1037,8 +1062,12 @@
         </div>`;
       card.style.cursor = 'pointer';
       card.onclick = () => {
-        const q = encodeURIComponent(`${track.title} ${track.artist}`);
-        window.open(`https://music.youtube.com/search?q=${q}`, '_blank');
+        if (track.videoId) {
+          openMiniPlayer(track.videoId, track.title, track.artist);
+        } else {
+          const q = encodeURIComponent(`${track.title} ${track.artist}`);
+          window.open(`https://music.youtube.com/search?q=${q}`, '_blank');
+        }
       };
       grid.appendChild(card);
     });
@@ -1495,6 +1524,22 @@
 
   let pendingAvatarData = null;
 
+
+  function openMiniPlayer(videoId, title, artist) {
+    const player = document.getElementById('miniPlayer');
+    const iframe = document.getElementById('miniPlayerIframe');
+    document.getElementById('miniPlayerTitle').textContent = title;
+    document.getElementById('miniPlayerArtist').textContent = artist;
+    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    player.classList.add('open');
+  }
+
+  function closeMiniPlayer() {
+    const player = document.getElementById('miniPlayer');
+    const iframe = document.getElementById('miniPlayerIframe');
+    iframe.src = '';
+    player.classList.remove('open');
+  }
   function handleAvatarChange(e) {
     const file = e.target.files[0];
     if (!file) return;
