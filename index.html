@@ -902,33 +902,26 @@
   }
 
   // SUPABASE DATA - 실제
+  const YT_API_KEY = 'AIzaSyC6kdYgPOwqEqBDvYOxgC8SmSgZrK7ynbE';
   const lfmImageCache = {};
   async function fetchLfmImage(title, artist) {
     const key = `${title}__${artist}`;
     if (lfmImageCache[key] !== undefined) return lfmImageCache[key];
     const set = (v) => { lfmImageCache[key] = v; return v; };
     try {
-      // 1. MusicBrainz + Cover Art Archive
-      const mbRes = await fetch(`https://musicbrainz.org/ws/2/recording/?query=recording:"${encodeURIComponent(title)}" AND artist:"${encodeURIComponent(artist)}"&fmt=json&limit=3`, {headers:{'User-Agent':'LoopNote/1.0 ( loopnote@example.com )'}});
-      const mbData = await mbRes.json();
-      const recordings = mbData?.recordings || [];
-      for (const rec of recordings) {
-        const releaseId = rec?.releases?.[0]?.id;
-        if (!releaseId) continue;
-        try {
-          const caRes = await fetch(`https://coverartarchive.org/release/${releaseId}/front-500`);
-          if (caRes.ok) return set(caRes.url);
-        } catch(e2) {}
-      }
-      // 2. Last.fm fallback (이미지 품질 검증)
-      const lfmRes = await fetch(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LFM_API_KEY}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json`);
-      const lfmData = await lfmRes.json();
-      const imgs = lfmData?.track?.album?.image || [];
-      const img = (imgs.find(i => i.size === 'extralarge') || imgs.find(i => i.size === 'large'))?.['#text'] || '';
       const BAD = ['2a96cbd8b46e442fc41c2b86b821562f', 'noimage'];
-      if (img && img.trim() && !BAD.some(b => img.includes(b))) {
-        return set(img.replace('http://', 'https://'));
-      }
+      const fix = u => (u||'').replace('http://', 'https://');
+      // 1. Last.fm track.getInfo
+      const r1 = await fetch(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LFM_API_KEY}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json`);
+      const d1 = await r1.json();
+      const imgs1 = d1?.track?.album?.image || [];
+      const img1 = fix((imgs1.find(i=>i.size==='extralarge')||imgs1.find(i=>i.size==='large'))?.['#text']||'');
+      if (img1 && !BAD.some(b=>img1.includes(b))) return set(img1);
+      // 2. YouTube Data API 썸네일
+      const ytRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(title + ' ' + artist)}&type=video&maxResults=1&key=${YT_API_KEY}`);
+      const ytData = await ytRes.json();
+      const thumb = ytData?.items?.[0]?.snippet?.thumbnails?.high?.url;
+      if (thumb) return set(thumb);
       return set('');
     } catch(e) { return set(''); }
   }
