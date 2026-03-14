@@ -128,8 +128,8 @@
     .section-heading .sub { font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
 
     /* PINTEREST GRID */
-    .chart-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
-    @media (max-width: 600px) { .chart-grid { columns: 2; } .stats-row { grid-template-columns: repeat(2, 1fr); } }
+    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; align-items: start; }
+    @media (max-width: 600px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } .stats-row { grid-template-columns: repeat(2, 1fr); } }
     .chart-card { margin-bottom: 0; background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s; animation: fadeUp 0.4s ease both; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     .chart-card:hover { transform: translateY(-4px); border-color: rgba(232,50,90,0.4); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
@@ -1007,14 +1007,17 @@
     tracks.slice(0, 10).forEach((track, i) => {
       const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
       const pct = Math.round((track.count / maxCount) * 100);
-      const heights = [140, 170, 120, 160, 150, 130, 180, 145, 165, 125, 155, 135];
-      const h = heights[i % heights.length];
+      const h = 180;
       const card = document.createElement('div');
       card.className = 'chart-card';
       card.style.animationDelay = `${i * 0.04}s`;
+      const colors = ['#e8325a','#9b59b6','#3498db','#e67e22','#1abc9c','#e74c3c','#2980b9','#8e44ad','#16a085','#d35400'];
+      const color = colors[(track.artist.charCodeAt(0) || 0) % colors.length];
+      const initials = track.artist.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '♪';
+      const placeholder = `<div class="card-img-placeholder" style="height:${h}px;background:linear-gradient(135deg,${color}22,${color}44);flex-direction:column;gap:6px"><span style="font-size:32px;font-weight:700;color:${color};opacity:0.9">${initials}</span></div>`;
       const imgHtml = track.image
-        ? `<img src="${track.image}" alt="${track.title}" loading="lazy" style="height:${h}px;width:100%" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-img-placeholder" style="display:none;height:${h}px">🎵</div>`
-        : `<div class="card-img-placeholder" style="height:${h}px">🎵</div>`;
+        ? `<img src="${track.image}" alt="${track.title}" loading="lazy" style="height:${h}px;width:100%" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-img-placeholder" style="display:none;height:${h}px;background:linear-gradient(135deg,${color}22,${color}44);flex-direction:column"><span style="font-size:32px;font-weight:700;color:${color}">${initials}</span></div>`
+        : placeholder;
       card.innerHTML = `
         <div class="card-img-wrap">${imgHtml}<div class="rank-badge ${rankClass}">${i+1}</div></div>
         <div class="card-body">
